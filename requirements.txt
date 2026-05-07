@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+jinja2
+akshare>=1.18.0
+pandas
+ta
+python-multipart
+httpx
+anthropic

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A股双Agent智能选股</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+
+        <!-- HEADER -->
+        <header>
+            <h1><span class="dim">[ </span>A股双Agent<span class="hl">智能选股</span><span class="dim"> ]</span></h1>
+            <div class="tags">
+                <span class="tag tag-a">Agent A // 筛选器</span>
+                <span class="arrow">&rarr;</span>
+                <span class="tag tag-b">Agent B // 分析师</span>
+                <span class="arrow">&rarr;</span>
+                <span class="tag tag-m">MiMo // 大模型</span>
+            </div>
+        </header>
+
+        <!-- PIPELINE -->
+        <div class="pipeline">
+            <div class="p-node">
+                <div class="p-icon cyan">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6M8 11h6" stroke-width="1.2"/></svg>
+                </div>
+                <span class="p-label">Agent A</span>
+                <span class="p-desc">全市场扫描<br>技术面 + 基本面</span>
+            </div>
+            <div class="p-arrow"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            <div class="p-node">
+                <div class="p-icon purple">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9966ff" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-6"/></svg>
+                </div>
+                <span class="p-label">Agent B</span>
+                <span class="p-desc">深度研判<br>多维评分 + 信号</span>
+            </div>
+            <div class="p-arrow"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            <div class="p-node">
+                <div class="p-icon amber">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffaa00" stroke-width="1.5"><path d="M12 2a4 4 0 0 1 4 4v1a3 3 0 0 1 3 3v1a2 2 0 0 1-2 2h-1l1 5H7l1-5H7a2 2 0 0 1-2-2v-1a3 3 0 0 1 3-3V6a4 4 0 0 1 4-4z"/><circle cx="9" cy="8" r="1" fill="#ffaa00"/><circle cx="15" cy="8" r="1" fill="#ffaa00"/></svg>
+                </div>
+                <span class="p-label">MiMo</span>
+                <span class="p-desc">智能调度<br>解读 + 策略调整</span>
+            </div>
+        </div>
+
+        <!-- MAIN GRID -->
+        <div class="main-grid">
+
+            <!-- LEFT: Controls + Results -->
+            <div class="left-col">
+
+                <!-- Chat -->
+                <div class="card">
+                    <div class="card-head chat-header">
+                        <h3><span class="dot live" style="background:var(--amber)"></span>MiMo 智能助手</h3>
+                        <span class="chat-hint">natural language // 自然语言驱动选股</span>
+                    </div>
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-msg assistant">
+                            <div class="avatar">M</div>
+                            <div class="bubble">
+                                你好！我是A股智能选股助手。你可以：
+                                <br>&bull; 说"帮我找低估值的消费股"来触发筛选
+                                <br>&bull; 问"第1只股票为什么推荐？"来追问分析
+                                <br>&bull; 说"把PE条件调到30以下重新筛"来调整策略
+                                <br>也可以直接用下方快捷按钮或手动扫描。
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-input-row">
+                        <input type="text" id="chatInput" placeholder="输入你的需求..." onkeydown="if(event.key==='Enter')sendChat()">
+                        <button class="btn btn-cyan" id="sendBtn" onclick="sendChat()">SEND</button>
+                    </div>
+                    <div class="shortcuts">
+                        <button onclick="quickChat('帮我找PE低于30、技术面向好的股票')">低PE+技术面好</button>
+                        <button onclick="quickChat('筛选ROE大于15%的价值股')">高ROE价值股</button>
+                        <button onclick="quickChat('找放量突破的强势股')">放量突破</button>
+                        <button onclick="quickChat('扫描全部行业，给我Top10推荐')">全行业Top10</button>
+                    </div>
+                </div>
+
+                <!-- Params -->
+                <div class="card">
+                    <div class="card-head">
+                        <h3><span class="dot" style="background:var(--cyan)"></span>手动扫描</h3>
+                        <span class="params-note">Agent A &rarr; Agent B // 直接调用</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="param-grid">
+                            <div>
+                                <label>推荐数量</label>
+                                <input type="number" id="topN" value="15" min="5" max="50">
+                            </div>
+                            <div>
+                                <label>最小市值(亿)</label>
+                                <input type="number" id="minMv" value="50" min="10" max="1000">
+                            </div>
+                            <div>
+                                <label>最大PE</label>
+                                <input type="number" id="maxPe" value="100" min="10" max="500">
+                            </div>
+                        </div>
+                        <button class="scan-btn" id="scanBtn" onclick="startScan()">[ 启动扫描 ]</button>
+                    </div>
+                </div>
+
+                <!-- Log -->
+                <div class="card" id="logSection" style="display:none">
+                    <div class="card-head">
+                        <h3><span class="dot live" style="background:var(--emerald)"></span>Agent 实时日志</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="log-box" id="logBox"></div>
+                    </div>
+                </div>
+
+                <!-- Candidates -->
+                <div class="card" id="candidatesSection" style="display:none">
+                    <div class="card-head">
+                        <h3><span class="dot" style="background:var(--cyan)"></span>Agent A 候选池</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="cand-tags" id="candidatesTags"></div>
+                    </div>
+                </div>
+
+                <!-- Results -->
+                <div class="card" id="resultSection" style="display:none">
+                    <div class="card-head">
+                        <h3><span class="dot" style="background:var(--purple)"></span>Agent B 最终推荐</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>#</th><th>代码</th><th>名称</th><th>现价</th><th>涨跌%</th>
+                                        <th>PE</th><th>ROE%</th><th>技术分</th><th>基本面</th><th>动量</th>
+                                        <th>综合分</th><th>信号</th><th>详情</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="resultBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Sample Data -->
+            <div>
+                <div class="sample-title">示例推荐 // Sample</div>
+
+                <div class="stock-card c-amber">
+                    <div class="sc-top">
+                        <div><div class="sc-name">贵州茅台</div><div class="sc-code">600519.SH</div></div>
+                        <span class="sc-signal s-amber">强烈推荐</span>
+                    </div>
+                    <div class="sc-price">
+                        <span class="v">1,856.00</span>
+                        <span class="c up">+2.34%</span>
+                    </div>
+                    <div class="sc-vals">
+                        <div class="sc-val"><div class="l">PE</div><div class="v">33.2</div></div>
+                        <div class="sc-val"><div class="l">PB</div><div class="v">10.8</div></div>
+                        <div class="sc-val"><div class="l">ROE</div><div class="v">32.5%</div></div>
+                    </div>
+                    <div class="sc-scores">
+                        <div class="sc-score"><div class="l">技术</div><div class="v c-high">88</div></div>
+                        <div class="sc-score"><div class="l">基本面</div><div class="v c-high">82</div></div>
+                        <div class="sc-score"><div class="l">动量</div><div class="v c-mid">75</div></div>
+                        <div class="sc-score"><div class="l">综合</div><div class="v c-high">82.3</div></div>
+                    </div>
+                    <div class="sc-reasons">
+                        <div class="sc-reason">均线多头排列，趋势向上</div>
+                        <div class="sc-reason">MACD金叉确认，红柱放大</div>
+                        <div class="sc-reason">量价齐升，主力资金流入</div>
+                    </div>
+                </div>
+
+                <div class="stock-card c-cyan">
+                    <div class="sc-top">
+                        <div><div class="sc-name">宁德时代</div><div class="sc-code">300750.SZ</div></div>
+                        <span class="sc-signal s-emerald">推荐</span>
+                    </div>
+                    <div class="sc-price">
+                        <span class="v">218.50</span>
+                        <span class="c up">+1.67%</span>
+                    </div>
+                    <div class="sc-vals">
+                        <div class="sc-val"><div class="l">PE</div><div class="v">24.8</div></div>
+                        <div class="sc-val"><div class="l">PB</div><div class="v">4.6</div></div>
+                        <div class="sc-val"><div class="l">ROE</div><div class="v">18.7%</div></div>
+                    </div>
+                    <div class="sc-scores">
+                        <div class="sc-score"><div class="l">技术</div><div class="v c-high">82</div></div>
+                        <div class="sc-score"><div class="l">基本面</div><div class="v c-high">78</div></div>
+                        <div class="sc-score"><div class="l">动量</div><div class="v c-high">80</div></div>
+                        <div class="sc-score"><div class="l">综合</div><div class="v c-high">80.1</div></div>
+                    </div>
+                    <div class="sc-reasons">
+                        <div class="sc-reason">RSI 58，中性偏强区间</div>
+                        <div class="sc-reason">布林带中轨支撑有效</div>
+                        <div class="sc-reason">放量突破前期平台</div>
+                    </div>
+                </div>
+
+                <div class="stock-card c-purple">
+                    <div class="sc-top">
+                        <div><div class="sc-name">中国平安</div><div class="sc-code">601318.SH</div></div>
+                        <span class="sc-signal s-cyan">观望</span>
+                    </div>
+                    <div class="sc-price">
+                        <span class="v">52.30</span>
+                        <span class="c down">-0.57%</span>
+                    </div>
+                    <div class="sc-vals">
+                        <div class="sc-val"><div class="l">PE</div><div class="v">8.9</div></div>
+                        <div class="sc-val"><div class="l">PB</div><div class="v">1.1</div></div>
+                        <div class="sc-val"><div class="l">ROE</div><div class="v">12.3%</div></div>
+                    </div>
+                    <div class="sc-scores">
+                        <div class="sc-score"><div class="l">技术</div><div class="v c-mid">55</div></div>
+                        <div class="sc-score"><div class="l">基本面</div><div class="v c-high">72</div></div>
+                        <div class="sc-score"><div class="l">动量</div><div class="v c-low">38</div></div>
+                        <div class="sc-score"><div class="l">综合</div><div class="v c-mid">55.6</div></div>
+                    </div>
+                    <div class="sc-reasons">
+                        <div class="sc-reason">PE仅8.9倍，估值历史低位</div>
+                        <div class="sc-reason">PB 1.1倍接近清算价值</div>
+                        <div class="sc-reason">RSI 42偏弱，等待反转信号</div>
+                    </div>
+                </div>
+
+                <div class="footer-note">Powered by MiMo v2.5 // 数据来源: 新浪财经</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-top">
+                <h3 id="modalTitle"></h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        let scanData = [], chatHistory = [], chatBusy = false;
+
+        async function sendChat() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text || chatBusy) return;
+            input.value = '';
+            appendChat('user', text);
+            chatHistory.push({ role: 'user', content: text });
+            chatBusy = true;
+            document.getElementById('sendBtn').disabled = true;
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 300000);
+            try {
+                const resp = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: chatHistory }),
+                    signal: ctrl.signal,
+                });
+                if (!resp.ok) { appendChat('system', '服务器错误: HTTP ' + resp.status); return; }
+                const reader = resp.body.getReader(), dec = new TextDecoder();
+                let buf = '', aText = '', tText = '', msgEl = null, thinkEl = null;
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buf += dec.decode(value, { stream: true });
+                    const lines = buf.split('\n'); buf = lines.pop();
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+                        const msg = JSON.parse(line.slice(6));
+                        if (msg.type === 'thinking') {
+                            tText += msg.data;
+                            if (!msgEl) msgEl = appendChat('assistant', '', true);
+                            if (!thinkEl) {
+                                thinkEl = document.createElement('div');
+                                thinkEl.className = 'thinking-block';
+                                thinkEl.innerHTML = '<div class="thinking-header" onclick="this.parentElement.classList.toggle(\'expanded\')">思考过程 <span class="thinking-toggle">&#9654;</span></div><div class="thinking-content"></div>';
+                                msgEl.querySelector('.bubble').prepend(thinkEl);
+                            }
+                            thinkEl.querySelector('.thinking-content').textContent = tText;
+                            scrollChat();
+                        } else if (msg.type === 'text') {
+                            if (!msgEl) msgEl = appendChat('assistant', '', true);
+                            aText += msg.data;
+                            let t = msgEl.querySelector('.response-text');
+                            if (!t) { t = document.createElement('div'); t.className = 'response-text'; msgEl.querySelector('.bubble').appendChild(t); }
+                            t.innerHTML = fmtMd(aText);
+                            scrollChat();
+                        } else if (msg.type === 'progress') { appendChat('system', msg.data); }
+                        else if (msg.type === 'candidates') { showCandidates(msg.data); }
+                        else if (msg.type === 'result') { scanData = msg.data; showResults(msg.data); }
+                        else if (msg.type === 'error') { appendChat('system', msg.data); }
+                    }
+                }
+                if (aText) chatHistory.push({ role: 'assistant', content: aText });
+            } catch (e) {
+                appendChat('system', e.name === 'AbortError' ? '请求超时' : '请求失败: ' + e.message);
+            } finally { clearTimeout(timer); chatBusy = false; document.getElementById('sendBtn').disabled = false; }
+        }
+
+        function quickChat(t) { document.getElementById('chatInput').value = t; sendChat(); }
+
+        function appendChat(role, text, ret = false) {
+            const c = document.getElementById('chatMessages'), d = document.createElement('div');
+            d.className = 'chat-msg ' + role;
+            const av = role === 'user' ? '<div class="avatar">U</div>' : role === 'assistant' ? '<div class="avatar">M</div>' : '<div class="avatar">S</div>';
+            d.innerHTML = av + '<div class="bubble">' + (ret ? '' : esc(text)) + '</div>';
+            c.appendChild(d); scrollChat();
+            return ret ? d : null;
+        }
+
+        function scrollChat() { const e = document.getElementById('chatMessages'); e.scrollTop = e.scrollHeight; }
+        function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function fmtMd(t) { return esc(t).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>').replace(/• /g,'&bull; '); }
+
+        async function startScan() {
+            const btn = document.getElementById('scanBtn');
+            btn.disabled = true; btn.textContent = '[ 扫描中... ]';
+            const topN = document.getElementById('topN').value, minMv = document.getElementById('minMv').value, maxPe = document.getElementById('maxPe').value;
+            const ls = document.getElementById('logSection');
+            ls.style.display = 'block';
+            document.getElementById('candidatesSection').style.display = 'none';
+            document.getElementById('resultSection').style.display = 'none';
+            document.getElementById('logBox').innerHTML = '';
+            document.getElementById('candidatesTags').innerHTML = '';
+            document.getElementById('resultBody').innerHTML = '';
+            const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 300000);
+            try {
+                addLog('正在连接服务器...');
+                const resp = await fetch('/api/scan?top_n=' + topN + '&min_mv=' + minMv + '&max_pe=' + maxPe, { signal: ctrl.signal });
+                if (!resp.ok) { addLog('服务器错误: HTTP ' + resp.status); return; }
+                const reader = resp.body.getReader(), dec = new TextDecoder();
+                let buf = '';
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buf += dec.decode(value, { stream: true });
+                    const lines = buf.split('\n'); buf = lines.pop();
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try { handleMsg(JSON.parse(line.slice(6))); } catch(e) {}
+                        }
+                    }
+                }
+            } catch (e) {
+                addLog(e.name === 'AbortError' ? '扫描超时' : '网络错误: ' + e.message);
+            } finally { clearTimeout(timer); btn.disabled = false; btn.textContent = '[ 启动扫描 ]'; }
+        }
+
+        function handleMsg(m) {
+            if (m.type === 'progress') addLog(m.data);
+            else if (m.type === 'candidates') showCandidates(m.data);
+            else if (m.type === 'result') { scanData = m.data; showResults(m.data); }
+        }
+
+        function addLog(t) {
+            const b = document.getElementById('logBox'), d = document.createElement('div');
+            d.className = 'log-line'; d.textContent = t; b.appendChild(d); b.scrollTop = b.scrollHeight;
+        }
+
+        function showCandidates(cands) {
+            document.getElementById('candidatesSection').style.display = 'block';
+            document.getElementById('candidatesTags').innerHTML = cands.map(c => '<span class="cand-tag">' + c.code + ' ' + c.name + ' <small>' + c.score + '分</small></span>').join('');
+        }
+
+        function showResults(data) {
+            document.getElementById('resultSection').style.display = 'block';
+            document.getElementById('resultBody').innerHTML = data.map((r, i) => '<tr><td class="rank">' + (i+1) + '</td><td class="code">' + r.code + '</td><td>' + r.name + '</td><td>' + r.price + '</td><td class="' + (r.change_pct>=0?'up':'down') + '">' + (r.change_pct>0?'+':'') + r.change_pct + '%</td><td>' + r.pe + '</td><td>' + r.roe + '</td><td><div class="sbar"><div class="sbar-fill" style="width:' + r.tech_score + '%;background:' + sCol(r.tech_score) + '"></div><span>' + r.tech_score + '</span></div></td><td><div class="sbar"><div class="sbar-fill" style="width:' + r.fund_score + '%;background:' + sCol(r.fund_score) + '"></div><span>' + r.fund_score + '</span></div></td><td><div class="sbar"><div class="sbar-fill" style="width:' + r.momentum_score + '%;background:' + sCol(r.momentum_score) + '"></div><span>' + r.momentum_score + '</span></div></td><td class="total">' + r.total_score + '</td><td><span class="signal" style="background:' + r.signal_color + '">' + r.signal + '</span></td><td><button class="detail-btn" onclick=\'showDetail(' + JSON.stringify(r).replace(/'/g,"&#39;") + ')\'>详情</button></td></tr>').join('');
+        }
+
+        function showDetail(r) {
+            document.getElementById('modalTitle').textContent = r.code + ' ' + r.name;
+            document.getElementById('modalBody').innerHTML = '<div class="detail-grid"><div class="detail-sec"><h4>基本面</h4><p>现价: ' + r.price + ' | 涨跌: ' + r.change_pct + '%</p><p>PE: ' + r.pe + ' | PB: ' + r.pb + ' | ROE: ' + r.roe + '%</p><p>市值: ' + r.market_cap + '亿</p></div><div class="detail-sec"><h4>技术面</h4><p>RSI: ' + r.rsi + '</p></div></div><div class="detail-sec"><h4>分析理由</h4><ul>' + r.reasons.map(x=>'<li>'+x+'</li>').join('') + '</ul></div><div class="detail-sec risk"><h4>风险提示</h4><ul>' + r.risks.map(x=>'<li>'+x+'</li>').join('') + '</ul></div>';
+            document.getElementById('modalOverlay').classList.add('show');
+        }
+
+        function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+        function sCol(s) { return s >= 70 ? '#00ff88' : s >= 50 ? '#ffaa00' : '#ff3366'; }
+    </script>
+</body>
+</html>
